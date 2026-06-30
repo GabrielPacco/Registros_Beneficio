@@ -46,18 +46,17 @@
   .diahdr{position:sticky; top:0; background:var(--bg); color:var(--muted);
     font-size:12px; letter-spacing:1px; font-weight:700; text-transform:uppercase;
     padding:8px 4px 4px; border-bottom:1px solid var(--borde)}
-  .pieza{display:flex; flex-direction:column; gap:6px; padding:11px 12px;
-    border-left:6px solid var(--rojo); background:var(--rojo-bg);
-    border-radius:8px; margin:6px 0; cursor:pointer; animation:fadein .12s}
+  .pieza{display:flex; align-items:center; gap:10px; padding:7px 10px;
+    border-left:5px solid var(--rojo); background:var(--rojo-bg);
+    border-radius:7px; margin:4px 0; cursor:pointer; animation:fadein .12s}
   .pieza:active{filter:brightness(1.25)}
-  .linea1{display:flex; align-items:center; gap:10px}
-  .num{font-size:26px; font-weight:800; letter-spacing:.5px}
-  .cam{font-size:18px; font-weight:700; padding:4px 13px; border-radius:8px;
-    margin-left:auto; background:#23304a; color:#9ec1ff; border:1px solid #3a5a93; white-space:nowrap}
+  .num{font-size:21px; font-weight:800; letter-spacing:.5px; min-width:56px}
+  .cam{font-size:15px; font-weight:700; padding:2px 9px; border-radius:6px;
+    background:#23304a; color:#9ec1ff; border:1px solid #3a5a93; white-space:nowrap}
   .cam.camno{background:#3a2a2a; color:#f0a3a3; border-color:#6a3a3a}
-  .linea2{display:flex; align-items:center; gap:16px; flex-wrap:wrap; font-size:18px}
-  .peso{color:#fff; font-weight:700}
-  .cliente{color:#dfe5f0; font-weight:500}
+  .peso{font-size:16px; color:#fff; font-weight:700; white-space:nowrap}
+  .cliente{font-size:15px; color:#dfe5f0; font-weight:500;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0}
   .mk .meta{font-size:13px; color:var(--muted)}
   .vacio{color:var(--muted); text-align:center; padding:40px 10px; font-size:15px}
   @keyframes fadein{from{opacity:0} to{opacity:1}}
@@ -295,16 +294,13 @@ function render(){
     }
     const cam = p.camara
       ? (p.camara==="-"
-          ? `<span class="cam camno">No ubicada</span>`
-          : `<span class="cam">Cámara ${p.camara}</span>`)
+          ? `<span class="cam camno">s/cám</span>`
+          : `<span class="cam">C${p.camara}</span>`)
       : "";
-    const l2 = [];
-    if(p.peso) l2.push(`<span class="peso">${p.peso} kg</span>`);
-    if(p.cliente) l2.push(`<span class="cliente">${p.cliente}</span>`);
-    const linea2 = l2.length ? `<div class="linea2">${l2.join("")}</div>` : "";
+    const peso = p.peso ? `<span class="peso">${p.peso} kg</span>` : "";
+    const cliente = p.cliente ? `<span class="cliente">${p.cliente}</span>` : "";
     html += `<div class="pieza" data-uid="${p.uid}">
-      <div class="linea1"><span class="num">${p.id}</span>${cam}</div>
-      ${linea2}
+      <span class="num">${p.id}</span>${cam}${peso}${cliente}
     </div>`;
   }
   cont.innerHTML = html;
@@ -377,11 +373,20 @@ document.getElementById("hacerImportar").onclick = ()=>{
   const nuevas = parsear(txt);
   if(nuevas.length===0){ alert("No se reconocieron piezas. Revisa el formato."); return; }
   const modo = document.querySelector('input[name=modo]:checked').value;
-  piezas = modo==="repl" ? nuevas : piezas.concat(nuevas);
+  // descartar IDs repetidos (se queda con el primero)
+  const existentes = new Set(modo==="repl" ? [] : piezas.map(p=>p.id));
+  const vistos = new Set();
+  const limpias = []; let descartadas = 0;
+  for(const p of nuevas){
+    if(existentes.has(p.id) || vistos.has(p.id)){ descartadas++; continue; }
+    vistos.add(p.id); limpias.push(p);
+  }
+  piezas = modo==="repl" ? limpias : piezas.concat(limpias);
   guardar();
   document.getElementById("texto").value="";
   cerrar("modalImportar"); render();
-  alert("Importadas "+nuevas.length+" piezas.");
+  alert("Importadas "+limpias.length+" piezas."
+    + (descartadas? "\nDescartadas "+descartadas+" repetidas (ID duplicado).":""));
 };
 document.getElementById("borrarMarcados").onclick = ()=>{
   if(!confirm("¿Borrar las piezas ya marcadas?")) return;
