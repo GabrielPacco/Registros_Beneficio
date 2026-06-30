@@ -154,7 +154,7 @@
       <button class="btnd" id="borrarTodo">Borrar TODO</button>
     </div>
     <p style="margin-top:14px">Los datos se guardan en este celular y funcionan sin internet. Cada sección (Res / Cerdo marcar / Cerdo despachar) tiene su propia lista.</p>
-    <p style="margin-top:4px; font-size:12px; color:var(--muted)">Versión <b>v16 · cerdo</b> · 30-jun</p>
+    <p style="margin-top:4px; font-size:12px; color:var(--muted)">Versión <b>v17 · cerdo</b> · 30-jun</p>
   </div>
 </div>
 
@@ -292,6 +292,18 @@ function labelGrupo(g){
   const i=MERCADOS.indexOf(g);
   return i>=0 ? (i+1)+". "+g : g;
 }
+// clave/etiqueta del sub-grupo visual: en despacho es mercado + fecha
+function claveVista(p){
+  if(seccion==="cd") return (mercadoDe(p.cliente)||"Sin mercado")+"||"+(p.dia||"");
+  return p.dia||"";
+}
+function labelVista(g){
+  if(seccion==="res") return DIA_NOMBRE[g]||"Sin día";
+  if(seccion==="cm")  return g||"Sin fecha";
+  const part=g.split("||"), m=part[0], f=part[1];
+  const i=MERCADOS.indexOf(m);
+  return (i>=0?(i+1)+". ":"")+m+(f?" · "+f:" · sin fecha");
+}
 
 /* ====== Parser RES (día + cámara) ====== */
 function parsearRes(texto){
@@ -424,26 +436,31 @@ function render(){
   }
 
   vis.sort((a,b)=>{
-    const ga=grupoDe(a), gb=grupoDe(b);
     if(seccion==="cm"){
       const fa=fechaVal(a.dia), fb=fechaVal(b.dia);
-      if(fa!==fb) return fb-fa;
+      if(fa!==fb) return fb-fa;          // marcar: fecha más reciente primero
       return Number(a.id)-Number(b.id);
     }
-    const oa=ordenGrupo(ga), ob=ordenGrupo(gb);
-    if(oa!==ob) return oa-ob;
     if(seccion==="cd"){
+      const oa=ordenGrupo(grupoDe(a)), ob=ordenGrupo(grupoDe(b));
+      if(oa!==ob) return oa-ob;          // 1) mercado en orden fijo
+      const fa=fechaVal(a.dia), fb=fechaVal(b.dia);
+      if(fa!==fb) return fa-fb;          // 2) fecha ascendente dentro del mercado
       const ca=a.cliente||"", cb=b.cliente||"";
-      if(ca!==cb) return ca.localeCompare(cb);
+      if(ca!==cb) return ca.localeCompare(cb);   // 3) cliente ascendente
+      return Number(a.id)-Number(b.id);          // 4) número
     }
+    const da=ORDEN_DIAS.indexOf(a.dia), db=ORDEN_DIAS.indexOf(b.dia);
+    if(da!==db) return da-db;
     return Number(a.id)-Number(b.id);
   });
 
-  let html=""; let grupoActual=" ";
+  let html=""; let grupoActual=" ";
+  const mostrarHdr = seccion==="cd" ? true : (filtroPrim==="todos");
   for(const p of vis){
-    if(filtroPrim==="todos"){
-      const g=grupoDe(p);
-      if(g!==grupoActual){ grupoActual=g; html += `<div class="diahdr">${esc(labelGrupo(g))}</div>`; }
+    if(mostrarHdr){
+      const g=claveVista(p);
+      if(g!==grupoActual){ grupoActual=g; html += `<div class="diahdr">${esc(labelVista(g))}</div>`; }
     }
     const cliente = p.cliente
       ? `<span class="cliente">${esc(p.cliente).replace(/\*/g,'<span class="ast">*</span>')}</span>` : "";
