@@ -59,7 +59,7 @@
     background:#23304a; color:#9ec1ff; border:1px solid #3a5a93}
   .cam.camno{background:#3a2a2a; color:#f0a3a3; border-color:#6a3a3a}
   .mk .meta{font-size:13px; color:var(--muted)}
-  .pieza.marcando{pointer-events:none; animation:marcar .45s ease forwards}
+  .pieza.marcando{pointer-events:none; animation:marcar .6s ease forwards}
   @keyframes marcar{
     0%{background:var(--rojo-bg); border-left-color:var(--rojo); transform:scale(1)}
     22%{background:#11401f; border-left-color:var(--verde); transform:scale(1.03);
@@ -157,7 +157,7 @@ J
 1560 88 C3</pre>
     <p>Una línea con solo la letra del día (<code>L M MI J V</code>) inicia un bloque.
        Cada pieza: <code>número peso cámara</code>. El peso es opcional (<code>1234 C2</code> también vale).
-       Cámara: <code>C1</code>…<code>C4</code>, y <code>C-</code> si no está ubicada.</p>
+       Cámara: <code>C1</code>…<code>C4</code>. Si no está ubicada (<code>C-</code>) o sin dato, no se muestra cámara.</p>
     <textarea id="texto" placeholder="Pega aquí…"></textarea>
     <label style="display:block; margin-top:8px; font-size:13px; color:var(--muted)">
       <input type="radio" name="modo" value="add" checked /> Agregar a lo existente
@@ -304,11 +304,8 @@ function render(){
     const cliente = p.cliente ? `<span class="cliente">${p.cliente}</span>` : "";
     const dia = p.dia ? `<span class="dia">${p.dia}</span>` : "";
     const peso = p.peso ? `<span class="peso">${p.peso} kg</span>` : "";
-    const cam = p.camara
-      ? (p.camara==="-"
-          ? `<span class="cam camno">s/cám</span>`
-          : `<span class="cam">C${p.camara}</span>`)
-      : "";
+    // cámara al final; si no está ubicada (C-) o no hay dato, se ignora
+    const cam = (p.camara && p.camara!=="-") ? `<span class="cam">C${p.camara}</span>` : "";
     html += `<div class="pieza" data-uid="${p.uid}">
       <span class="num">${p.id}</span>${cliente}${dia}${peso}${cam}
     </div>`;
@@ -328,7 +325,7 @@ function marcar(u){
   if(el){
     el.classList.add("marcando");
     el.addEventListener("animationend", fin, {once:true});
-    setTimeout(fin, 520); // respaldo por si no dispara animationend
+    setTimeout(fin, 680); // respaldo por si no dispara animationend
   } else { fin(); }
 }
 function aplicarMarca(u){
@@ -353,7 +350,7 @@ function renderMarcados(){
   if(m.length===0){ c.innerHTML=`<p>No hay piezas marcadas.</p>`; return; }
   c.innerHTML = m.map(p=>`<div class="mk">
     <span class="num">${p.id}</span>
-    <span class="meta">${p.cliente?p.cliente+" · ":""}${p.dia||""}${p.peso?" · "+p.peso+" kg":""}${p.camara?(p.camara==="-"?" · s/cám":" · C"+p.camara):""}</span>
+    <span class="meta">${p.cliente?p.cliente+" · ":""}${p.dia||""}${p.peso?" · "+p.peso+" kg":""}${(p.camara&&p.camara!=="-")?" · C"+p.camara:""}</span>
     <button class="btnd" data-undo="${p.uid}">Deshacer</button>
   </div>`).join("");
 }
