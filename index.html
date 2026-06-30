@@ -141,6 +141,7 @@
       <button class="btnd" id="borrarTodo">Borrar TODO</button>
     </div>
     <p style="margin-top:14px">Los datos se guardan en este celular y funcionan sin internet.</p>
+    <p style="margin-top:4px; font-size:12px; color:var(--muted)">Versión <b>v8</b> · 30-jun</p>
   </div>
 </div>
 
@@ -203,17 +204,17 @@ function parsear(texto){
   for(let raw of lineas){
     let linea = raw.trim();
     if(!linea) continue;
-    // normalizar cámara: "cám 2"->"C2", "cámara 3"->"C3", "cám -"->"C-"
-    linea = linea.replace(/\bc[aá]?m?(?:ara)?\.?\s*(-+|\d+)/gi, (m,g)=> "C"+(/\d/.test(g)?g:"-"));
+    // normalizar cámara: "cám 2"->"C2", "cámara 3"->"C3", "cám -"/"cám --"->"C-" (cualquier guion)
+    linea = linea.replace(/\bc[aá]?m?(?:ara)?\.?\s*([-‐-―−]+|\d+)/gi, (m,g)=> "C"+(/\d/.test(g)?g:"-"));
     const tokens = linea.split(/[\s,;|]+/).filter(Boolean);
     // ¿la línea es solo un día?
     if(tokens.length===1 && esDia(tokens[0])){ dia = normDia(tokens[0]); continue; }
     let diaLinea = dia, camara = "", nums = [], txt = [];
     for(let t of tokens){
       if(esDia(t)){ diaLinea = normDia(t); continue; }
-      const cm = t.match(/^C(-+|\d+)$/i);
+      const cm = t.match(/^C([-‐-―−]+|\d+)$/i);
       if(cm){ camara = /\d/.test(cm[1]) ? cm[1] : "-"; continue; }
-      if(t==="-"){ continue; } // marcador de peso vacío
+      if(/^[-‐-―−]+$/.test(t)){ continue; } // marcador de peso vacío (cualquier guion)
       if(/^\d+(\.\d+)?(kg)?$/i.test(t)){ nums.push(t); continue; }
       txt.push(t);
     }
