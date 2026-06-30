@@ -1,0 +1,9 @@
+# Notas personales / requerimientos (no van al repo público)
+requeriminetos.txt
+
+# Config local de herramientas
+.claude/
+
+# Varios
+.DS_Store
+Thumbs.db

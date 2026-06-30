@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
+<meta name="theme-color" content="#0f1115" />
+<title>Camal · Marcado</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1f242e;
+    --txt:#e7eaf0; --muted:#8b93a3;
+    --rojo:#ff4d4d; --rojo-bg:#2a1416;
+    --verde:#27c66b; --borde:#2a2f3a;
+    --acc:#3b82f6;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0; background:var(--bg); color:var(--txt);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+  body{padding-bottom:env(safe-area-inset-bottom)}
+
+  /* ---- Cabecera fija ---- */
+  header{position:sticky; top:0; z-index:20; background:var(--bg);
+    border-bottom:1px solid var(--borde); padding:8px 8px 6px}
+  .row1{display:flex; gap:6px; align-items:center}
+  #buscar{flex:1; font-size:20px; padding:10px 12px; border-radius:10px;
+    border:1px solid var(--borde); background:var(--panel); color:var(--txt)}
+  #buscar::placeholder{color:var(--muted)}
+  .btn{border:1px solid var(--borde); background:var(--panel); color:var(--txt);
+    border-radius:10px; padding:10px 12px; font-size:15px; cursor:pointer}
+  .btn:active{background:var(--panel2)}
+  .clearx{background:var(--panel); border:1px solid var(--borde); color:var(--muted);
+    border-radius:10px; padding:10px 12px; font-size:18px; cursor:pointer}
+
+  .row2{display:flex; gap:6px; align-items:center; margin-top:7px; flex-wrap:wrap}
+  .chips{display:flex; gap:5px; flex:1; flex-wrap:wrap}
+  .chip{padding:6px 12px; border-radius:999px; border:1px solid var(--borde);
+    background:var(--panel); color:var(--muted); font-size:14px; cursor:pointer}
+  .chip.on{background:var(--acc); border-color:var(--acc); color:#fff; font-weight:600}
+  .cont{font-size:14px; color:var(--muted); white-space:nowrap}
+  .cont b{color:var(--rojo); font-size:18px}
+
+  /* ---- Lista ---- */
+  main{padding:4px 8px 90px}
+  .diahdr{position:sticky; top:0; background:var(--bg); color:var(--muted);
+    font-size:12px; letter-spacing:1px; font-weight:700; text-transform:uppercase;
+    padding:8px 4px 4px; border-bottom:1px solid var(--borde)}
+  .pieza{display:flex; align-items:center; gap:10px; padding:9px 10px;
+    border-left:5px solid var(--rojo); background:var(--rojo-bg);
+    border-radius:8px; margin:4px 0; cursor:pointer; animation:fadein .12s}
+  .pieza:active{filter:brightness(1.25)}
+  .num{font-size:19px; font-weight:700; letter-spacing:.5px; min-width:62px}
+  .meta{font-size:12px; color:var(--muted); margin-left:auto; text-align:right; line-height:1.25}
+  .meta .pe{color:#cfd5e0}
+  .vacio{color:var(--muted); text-align:center; padding:40px 10px; font-size:15px}
+  @keyframes fadein{from{opacity:0} to{opacity:1}}
+
+  /* ---- Toast deshacer ---- */
+  #toast{position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+    background:var(--panel2); border:1px solid var(--borde); color:var(--txt);
+    padding:10px 14px; border-radius:12px; display:none; align-items:center; gap:14px;
+    z-index:40; box-shadow:0 6px 24px rgba(0,0,0,.5); max-width:92vw}
+  #toast b{color:var(--verde)}
+  #toast button{background:none; border:none; color:var(--acc); font-weight:700;
+    font-size:15px; cursor:pointer}
+
+  /* ---- Modales ---- */
+  .modal{position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:50;
+    display:none; align-items:flex-end}
+  .modal.open{display:flex}
+  .sheet{background:var(--panel); width:100%; max-height:88vh; overflow:auto;
+    border-radius:16px 16px 0 0; padding:16px; border-top:1px solid var(--borde)}
+  .sheet h2{margin:0 0 10px; font-size:18px}
+  .sheet p,.sheet li{color:var(--muted); font-size:13px; line-height:1.5}
+  textarea{width:100%; height:180px; background:var(--bg); color:var(--txt);
+    border:1px solid var(--borde); border-radius:10px; padding:10px; font-size:15px;
+    font-family:ui-monospace,Menlo,Consolas,monospace}
+  .acciones{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap}
+  .btnp{background:var(--acc); border:1px solid var(--acc); color:#fff;
+    border-radius:10px; padding:11px 14px; font-size:15px; font-weight:600; cursor:pointer}
+  .btnd{background:var(--panel2); border:1px solid var(--borde); color:var(--txt);
+    border-radius:10px; padding:11px 14px; font-size:15px; cursor:pointer}
+  code{background:var(--panel2); padding:1px 5px; border-radius:5px; color:#cfd5e0}
+  pre{background:var(--bg); border:1px solid var(--borde); border-radius:8px;
+    padding:10px; overflow:auto; font-size:12px; color:#cfd5e0}
+  .mk{display:flex; align-items:center; gap:10px; padding:8px 10px;
+    border-left:5px solid var(--verde); background:var(--panel2);
+    border-radius:8px; margin:4px 0}
+  .mk .num{min-width:62px}
+  .mk button{margin-left:auto}
+</style>
+</head>
+<body>
+<header>
+  <div class="row1">
+    <input id="buscar" inputmode="numeric" placeholder="Buscar N°…" autocomplete="off" />
+    <button class="clearx" id="limpiarBuscar" title="Limpiar">✕</button>
+    <button class="btn" id="menuBtn">☰</button>
+  </div>
+  <div class="row2">
+    <div class="chips" id="chips"></div>
+    <div class="cont" id="contador">Faltan <b>0</b> de 0</div>
+  </div>
+</header>
+
+<main id="lista"></main>
+
+<div id="toast">
+  <span>Marcado <b id="toastNum"></b></span>
+  <button id="deshacer">DESHACER</button>
+</div>
+
+<!-- Menú -->
+<div class="modal" id="modalMenu">
+  <div class="sheet">
+    <h2>Menú</h2>
+    <div class="acciones">
+      <button class="btnp" id="abrirImportar">＋ Importar lista</button>
+      <button class="btnd" id="abrirMarcados">Ver marcados</button>
+    </div>
+    <div class="acciones">
+      <button class="btnd" id="borrarMarcados">Borrar solo marcados</button>
+      <button class="btnd" id="borrarTodo">Borrar TODO</button>
+    </div>
+    <p style="margin-top:14px">Los datos se guardan en este celular y funcionan sin internet.</p>
+  </div>
+</div>
+
+<!-- Importar -->
+<div class="modal" id="modalImportar">
+  <div class="sheet">
+    <h2>Importar lista del día</h2>
+    <p>Pega el texto del OCR de Claude. Formato:</p>
+    <pre>V
+1234 185
+1240 192
+J
+1567 90</pre>
+    <p>Una línea con solo la letra del día (<code>L M MI J V</code>) inicia un bloque.
+       Luego cada pieza: <code>número peso</code>. También vale <code>1234 185 V</code> por línea.</p>
+    <textarea id="texto" placeholder="Pega aquí…"></textarea>
+    <label style="display:block; margin-top:8px; font-size:13px; color:var(--muted)">
+      <input type="radio" name="modo" value="add" checked /> Agregar a lo existente
+      &nbsp;&nbsp;
+      <input type="radio" name="modo" value="repl" /> Reemplazar todo
+    </label>
+    <div class="acciones">
+      <button class="btnp" id="hacerImportar">Importar</button>
+      <button class="btnd" id="cerrarImportar">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Marcados -->
+<div class="modal" id="modalMarcados">
+  <div class="sheet">
+    <h2>Marcados</h2>
+    <div id="listaMarcados"></div>
+    <div class="acciones">
+      <button class="btnd" id="cerrarMarcados">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ORDEN_DIAS = ["L","M","MI","J","V"];
+const DIA_NOMBRE = {L:"Lunes", M:"Martes", MI:"Miércoles", J:"Jueves", V:"Viernes"};
+let piezas = cargar();
+let filtroDia = "todos";
+let q = "";
+let undoUid = null;
+
+/* ---------- persistencia ---------- */
+function cargar(){ try{ return JSON.parse(localStorage.getItem("piezas")||"[]"); }catch(e){ return []; } }
+function guardar(){ localStorage.setItem("piezas", JSON.stringify(piezas)); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+/* ---------- parser ---------- */
+function parsear(texto){
+  const out=[]; let dia="";
+  const lineas = texto.split(/\r?\n/);
+  for(let raw of lineas){
+    const linea = raw.trim();
+    if(!linea) continue;
+    const tokens = linea.split(/[\s,;|]+/).filter(Boolean);
+    // ¿la línea es solo un día?
+    const soloDia = tokens.length===1 && esDia(tokens[0]);
+    if(soloDia){ dia = normDia(tokens[0]); continue; }
+    // buscar token de día dentro de la línea
+    let diaLinea = dia;
+    let resto = [];
+    for(const t of tokens){
+      if(esDia(t)) diaLinea = normDia(t);
+      else resto.push(t);
+    }
+    // de los restantes: numéricos -> id, peso ; texto -> cliente
+    const nums = resto.filter(t=>/^\d+(\.\d+)?(kg)?$/i.test(t));
+    const txt  = resto.filter(t=>!/^\d+(\.\d+)?(kg)?$/i.test(t));
+    if(nums.length===0) continue;
+    const id = nums[0].replace(/kg/i,"");
+    const peso = nums[1] ? nums[1].replace(/kg/i,"") : "";
+    const cliente = txt.join(" ");
+    out.push({uid:uid(), id, peso, dia:diaLinea||"", cliente, marcado:false});
+  }
+  return out;
+}
+function esDia(t){ return ORDEN_DIAS.includes(normDia(t)); }
+function normDia(t){ return t.toUpperCase().replace(/[.\-]/g,""); }
+
+/* ---------- render ---------- */
+function chipsHTML(){
+  const dias = ["todos", ...ORDEN_DIAS];
+  return dias.map(d=>{
+    const on = filtroDia===d ? "on":"";
+    const lbl = d==="todos" ? "Todos" : d;
+    return `<div class="chip ${on}" data-dia="${d}">${lbl}</div>`;
+  }).join("");
+}
+
+function render(){
+  document.getElementById("chips").innerHTML = chipsHTML();
+  const cont = document.getElementById("lista");
+
+  let vis = piezas.filter(p=>!p.marcado);
+  if(filtroDia!=="todos") vis = vis.filter(p=>p.dia===filtroDia);
+  if(q) vis = vis.filter(p=>p.id.includes(q));
+
+  // contador
+  const totalDia = piezas.filter(p=> filtroDia==="todos"||p.dia===filtroDia);
+  const faltan = totalDia.filter(p=>!p.marcado).length;
+  document.getElementById("contador").innerHTML = `Faltan <b>${faltan}</b> de ${totalDia.length}`;
+
+  if(vis.length===0){
+    cont.innerHTML = `<div class="vacio">${piezas.length===0
+      ? "No hay piezas. Toca ☰ → Importar lista."
+      : "✅ Nada pendiente aquí."}</div>`;
+    return;
+  }
+
+  // ordenar por día y luego por número ascendente
+  vis.sort((a,b)=>{
+    const da=ORDEN_DIAS.indexOf(a.dia), db=ORDEN_DIAS.indexOf(b.dia);
+    if(da!==db) return da-db;
+    return Number(a.id)-Number(b.id);
+  });
+
+  let html=""; let diaActual=" ";
+  for(const p of vis){
+    if(filtroDia==="todos" && p.dia!==diaActual){
+      diaActual=p.dia;
+      html += `<div class="diahdr">${DIA_NOMBRE[p.dia]||"Sin día"}</div>`;
+    }
+    const meta = [
+      p.peso ? `<span class="pe">${p.peso} kg</span>` : "",
+      filtroDia!=="todos" ? "" : "",
+      p.cliente ? `<div>${p.cliente}</div>` : ""
+    ].filter(Boolean).join(" ");
+    html += `<div class="pieza" data-uid="${p.uid}">
+      <span class="num">${p.id}</span>
+      <span class="meta">${meta||""}</span>
+    </div>`;
+  }
+  cont.innerHTML = html;
+}
+
+/* ---------- acciones ---------- */
+function marcar(u){
+  const p = piezas.find(x=>x.uid===u); if(!p) return;
+  p.marcado = true; guardar(); render();
+  undoUid = u;
+  const t=document.getElementById("toast");
+  document.getElementById("toastNum").textContent = p.id;
+  t.style.display="flex";
+  clearTimeout(window._tt);
+  window._tt = setTimeout(()=>{ t.style.display="none"; undoUid=null; }, 5000);
+}
+function desmarcar(u){
+  const p = piezas.find(x=>x.uid===u); if(!p) return;
+  p.marcado=false; guardar(); render(); renderMarcados();
+}
+
+/* ---------- marcados ---------- */
+function renderMarcados(){
+  const c=document.getElementById("listaMarcados");
+  const m=piezas.filter(p=>p.marcado).sort((a,b)=>Number(a.id)-Number(b.id));
+  if(m.length===0){ c.innerHTML=`<p>No hay piezas marcadas.</p>`; return; }
+  c.innerHTML = m.map(p=>`<div class="mk">
+    <span class="num">${p.id}</span>
+    <span class="meta">${p.dia||""} ${p.peso?p.peso+" kg":""}</span>
+    <button class="btnd" data-undo="${p.uid}">Deshacer</button>
+  </div>`).join("");
+}
+
+/* ---------- eventos ---------- */
+document.getElementById("lista").addEventListener("click", e=>{
+  const el = e.target.closest(".pieza"); if(el) marcar(el.dataset.uid);
+});
+document.getElementById("chips").addEventListener("click", e=>{
+  const el=e.target.closest(".chip"); if(!el) return;
+  filtroDia = el.dataset.dia; render();
+});
+document.getElementById("buscar").addEventListener("input", e=>{
+  q = e.target.value.replace(/\D/g,""); render();
+});
+document.getElementById("limpiarBuscar").addEventListener("click", ()=>{
+  q=""; document.getElementById("buscar").value=""; render();
+});
+document.getElementById("deshacer").addEventListener("click", ()=>{
+  if(undoUid) desmarcar(undoUid);
+  document.getElementById("toast").style.display="none"; undoUid=null;
+});
+
+function abrir(id){ document.getElementById(id).classList.add("open"); }
+function cerrar(id){ document.getElementById(id).classList.remove("open"); }
+document.getElementById("menuBtn").onclick = ()=>abrir("modalMenu");
+document.getElementById("abrirImportar").onclick = ()=>{ cerrar("modalMenu"); abrir("modalImportar"); };
+document.getElementById("cerrarImportar").onclick = ()=>cerrar("modalImportar");
+document.getElementById("abrirMarcados").onclick = ()=>{ cerrar("modalMenu"); renderMarcados(); abrir("modalMarcados"); };
+document.getElementById("cerrarMarcados").onclick = ()=>cerrar("modalMarcados");
+document.getElementById("listaMarcados").addEventListener("click", e=>{
+  const b=e.target.closest("[data-undo]"); if(b) desmarcar(b.dataset.undo);
+});
+
+document.getElementById("hacerImportar").onclick = ()=>{
+  const txt = document.getElementById("texto").value;
+  const nuevas = parsear(txt);
+  if(nuevas.length===0){ alert("No se reconocieron piezas. Revisa el formato."); return; }
+  const modo = document.querySelector('input[name=modo]:checked').value;
+  piezas = modo==="repl" ? nuevas : piezas.concat(nuevas);
+  guardar();
+  document.getElementById("texto").value="";
+  cerrar("modalImportar"); render();
+  alert("Importadas "+nuevas.length+" piezas.");
+};
+document.getElementById("borrarMarcados").onclick = ()=>{
+  if(!confirm("¿Borrar las piezas ya marcadas?")) return;
+  piezas = piezas.filter(p=>!p.marcado); guardar(); cerrar("modalMenu"); render();
+};
+document.getElementById("borrarTodo").onclick = ()=>{
+  if(!confirm("¿Borrar TODAS las piezas?")) return;
+  piezas=[]; guardar(); cerrar("modalMenu"); render();
+};
+// cerrar modal tocando el fondo
+document.querySelectorAll(".modal").forEach(m=>{
+  m.addEventListener("click", e=>{ if(e.target===m) m.classList.remove("open"); });
+});
+
+/* ---------- service worker (offline) ---------- */
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+
+render();
+</script>
+</body>
+</html>
