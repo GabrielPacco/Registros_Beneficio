@@ -24,6 +24,8 @@
   header{position:sticky; top:0; z-index:20; background:var(--bg);
     border-bottom:1px solid var(--borde); padding:8px 8px 6px}
   .row1{display:flex; gap:6px; align-items:center}
+  .sel{flex:1; font-size:16px; font-weight:600; padding:10px 10px; border-radius:10px;
+    border:1px solid var(--borde); background:var(--panel); color:var(--txt)}
   #buscar{flex:1; font-size:20px; padding:10px 12px; border-radius:10px;
     border:1px solid var(--borde); background:var(--panel); color:var(--txt)}
   #buscar::placeholder{color:var(--muted)}
@@ -44,7 +46,7 @@
   /* ---- Lista ---- */
   main{padding:4px 8px 90px}
   .diahdr{position:sticky; top:0; background:var(--bg); color:var(--muted);
-    font-size:12px; letter-spacing:1px; font-weight:700; text-transform:uppercase;
+    font-size:13px; letter-spacing:1px; font-weight:700; text-transform:uppercase;
     padding:8px 4px 4px; border-bottom:1px solid var(--borde)}
   .pieza{display:flex; align-items:center; gap:8px; padding:7px 10px;
     border-left:5px solid var(--rojo); background:var(--rojo-bg);
@@ -88,7 +90,7 @@
     border-radius:16px 16px 0 0; padding:16px; border-top:1px solid var(--borde)}
   .sheet h2{margin:0 0 10px; font-size:18px}
   .sheet p,.sheet li{color:var(--muted); font-size:13px; line-height:1.5}
-  textarea{width:100%; height:180px; background:var(--bg); color:var(--txt);
+  textarea{width:100%; height:170px; background:var(--bg); color:var(--txt);
     border:1px solid var(--borde); border-radius:10px; padding:10px; font-size:15px;
     font-family:ui-monospace,Menlo,Consolas,monospace}
   .acciones{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap}
@@ -109,9 +111,16 @@
 <body>
 <header>
   <div class="row1">
+    <select id="seccion" class="sel">
+      <option value="res">🐄 Res (marcar)</option>
+      <option value="cm">🐷 Cerdo — Marcar</option>
+      <option value="cd">🐷 Cerdo — Despachar</option>
+    </select>
+    <button class="btn" id="menuBtn">☰</button>
+  </div>
+  <div class="row1" style="margin-top:7px">
     <input id="buscar" inputmode="numeric" placeholder="Buscar N°…" autocomplete="off" />
     <button class="clearx" id="limpiarBuscar" title="Limpiar">✕</button>
-    <button class="btn" id="menuBtn">☰</button>
   </div>
   <div class="row2">
     <div class="chips" id="chips"></div>
@@ -125,7 +134,7 @@
 <main id="lista"></main>
 
 <div id="toast">
-  <span>Marcado <b id="toastNum"></b></span>
+  <span><span id="toastAccion">Marcado</span> <b id="toastNum"></b></span>
   <button id="deshacer">DESHACER</button>
 </div>
 
@@ -135,36 +144,30 @@
     <h2>Menú</h2>
     <div class="acciones">
       <button class="btnp" id="abrirImportar">＋ Importar lista</button>
-      <button class="btnd" id="abrirMarcados">Ver marcados</button>
+      <button class="btnd" id="abrirMarcados">Ver hechos</button>
     </div>
     <div class="acciones">
-      <button class="btnd" id="borrarMarcados">Borrar solo marcados</button>
+      <button class="btnd" id="abrirMercados">Mercados (despacho cerdo)</button>
+    </div>
+    <div class="acciones">
+      <button class="btnd" id="borrarMarcados">Borrar hechos</button>
       <button class="btnd" id="borrarTodo">Borrar TODO</button>
     </div>
-    <p style="margin-top:14px">Los datos se guardan en este celular y funcionan sin internet.</p>
-    <p style="margin-top:4px; font-size:12px; color:var(--muted)">Versión <b>v12</b> · 30-jun</p>
+    <p style="margin-top:14px">Los datos se guardan en este celular y funcionan sin internet. Cada sección (Res / Cerdo marcar / Cerdo despachar) tiene su propia lista.</p>
+    <p style="margin-top:4px; font-size:12px; color:var(--muted)">Versión <b>v14 · cerdo</b> · 30-jun</p>
   </div>
 </div>
 
 <!-- Importar -->
 <div class="modal" id="modalImportar">
   <div class="sheet">
-    <h2>Importar lista del día</h2>
-    <p>Pega el texto del OCR de Claude. Formato:</p>
-    <pre>V
-1234 185 C2
-1240 190 C1
-1255 - C-
-J
-1560 88 C3</pre>
-    <p>Una línea con solo la letra del día (<code>L M MI J V</code>) inicia un bloque.
-       Cada pieza: <code>número peso cámara</code>. El peso es opcional (<code>1234 C2</code> también vale).
-       Cámara: <code>C1</code>…<code>C4</code>. Si no está ubicada (<code>C-</code>) o sin dato, no se muestra cámara.</p>
+    <h2 id="tituloImport">Importar lista</h2>
+    <div id="ayudaImport"></div>
     <textarea id="texto" placeholder="Pega aquí…"></textarea>
     <label style="display:block; margin-top:8px; font-size:13px; color:var(--muted)">
-      <input type="radio" name="modo" value="add" checked /> Agregar a lo existente
+      <input type="radio" name="modoImp" value="add" checked /> Agregar a lo existente
       &nbsp;&nbsp;
-      <input type="radio" name="modo" value="repl" /> Reemplazar todo
+      <input type="radio" name="modoImp" value="repl" /> Reemplazar todo
     </label>
     <div class="acciones">
       <button class="btnp" id="hacerImportar">Importar</button>
@@ -173,10 +176,10 @@ J
   </div>
 </div>
 
-<!-- Marcados -->
+<!-- Marcados / Despachados -->
 <div class="modal" id="modalMarcados">
   <div class="sheet">
-    <h2>Marcados</h2>
+    <h2 id="tituloMarcados">Hechos</h2>
     <div id="listaMarcados"></div>
     <div class="acciones">
       <button class="btnd" id="cerrarMarcados">Cerrar</button>
@@ -184,162 +187,252 @@ J
   </div>
 </div>
 
+<!-- Mercados (tabla cliente -> mercado) -->
+<div class="modal" id="modalMercados">
+  <div class="sheet">
+    <h2>Clientes por mercado</h2>
+    <p>Una línea por mercado: <b>nombre del mercado : sus clientes</b>. La app agrupa el despacho según esto, en este orden fijo:
+       San Camilo → Feria El Altiplano → GZ Avelino → Metro → Mercado Esperanza → Chapi → Mercado Para Todos.</p>
+    <pre>San Camilo: H, F, A
+Feria El Altiplano: B, C
+GZ Avelino: D
+Metro: M2
+Mercado Esperanza: E
+Chapi: CH
+Mercado Para Todos: PT</pre>
+    <textarea id="textoMerc" placeholder="San Camilo: H, F, ..."></textarea>
+    <div class="acciones">
+      <button class="btnp" id="guardarMerc">Guardar</button>
+      <button class="btnd" id="cerrarMercados">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <script>
-const ORDEN_DIAS = ["V","J","MI","M","L"]; // bloques: día más reciente primero
+/* ====== Constantes ====== */
+const ORDEN_DIAS = ["V","J","MI","M","L"];
 const DIA_NOMBRE = {L:"Lunes", M:"Martes", MI:"Miércoles", J:"Jueves", V:"Viernes"};
-let piezas = cargar();
-let filtroDia = "todos";
+const MERCADOS = ["San Camilo","Feria El Altiplano","GZ Avelino","Metro","Mercado Esperanza","Chapi","Mercado Para Todos"];
+const MERC_CORTO = {"San Camilo":"S.Camilo","Feria El Altiplano":"Altiplano","GZ Avelino":"GZ Avelino","Metro":"Metro","Mercado Esperanza":"Esperanza","Chapi":"Chapi","Mercado Para Todos":"Para Todos"};
+const KEY = {res:"piezas", cm:"piezas_cm", cd:"piezas_cd"};
+
+/* ====== Estado ====== */
+function load(k){ try{ return JSON.parse(localStorage.getItem(k)||"[]"); }catch(e){ return []; } }
+const DB = { res:load("piezas"), cm:load("piezas_cm"), cd:load("piezas_cd") };
+let seccion = localStorage.getItem("seccion") || "res";
+if(!KEY[seccion]) seccion="res";
+let piezas = DB[seccion];
+let mercTxt = localStorage.getItem("mercTxt") || "";
+let mapaMerc = parsearMerc(mercTxt);
+let filtroPrim = "todos";
 let filtroCam = "todas";
 let q = "";
 let undoUid = null;
 
-/* ---------- persistencia ---------- */
-function cargar(){ try{ return JSON.parse(localStorage.getItem("piezas")||"[]"); }catch(e){ return []; } }
-function guardar(){ localStorage.setItem("piezas", JSON.stringify(piezas)); }
+function guardar(){ DB[seccion]=piezas; localStorage.setItem(KEY[seccion], JSON.stringify(piezas)); }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
-/* ---------- parser ---------- */
-function parsear(texto){
+/* ====== Helpers de texto ====== */
+function esc(s){ return s.replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function norm(s){ return (s||"").toString().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]/g,""); }
+function normCli(c){ return (c||"").toString().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9*]/g,""); }
+const NOISE = new Set(["pieza","piezas","simb","simbolo","simbolos","camara","cam",
+  "peso","pesos","fecha","dia","cliente","clientes","nro","numero","num","total","lista","kg"]);
+function esNoise(t){ const x=norm(t); return x!=="" && NOISE.has(x); }
+function limpiaCli(s){
+  let c = s.replace(/\s+/g," ").trim().split(" ").slice(0,4).join(" ");
+  return c.length>30 ? c.slice(0,30).trim() : c;
+}
+function esDia(t){ return ORDEN_DIAS.includes(normDia(t)); }
+function normDia(t){ return t.toUpperCase().replace(/[.\-]/g,""); }
+function esFecha(t){ return /^\d{1,2}\/\d{1,2}(\/\d{2,4})?$/.test(t); }
+function normFecha(t){ const m=t.match(/^(\d{1,2})\/(\d{1,2})/); return m ? (m[1].padStart(2,"0")+"/"+m[2].padStart(2,"0")) : t; }
+function fechaVal(f){ const m=(f||"").match(/^(\d{1,2})\/(\d{1,2})/); return m ? Number(m[2])*100+Number(m[1]) : -1; }
+
+/* ====== Mercados (cliente -> mercado) ====== */
+function matchMercado(nombre){
+  const n=norm(nombre);
+  for(const m of MERCADOS){ const nm=norm(m); if(nm===n || nm.includes(n) || n.includes(nm)) return m; }
+  return nombre.trim();
+}
+function parsearMerc(txt){
+  const mapa={};
+  for(const raw of (txt||"").split(/\r?\n/)){
+    const line=raw.trim(); if(!line) continue;
+    const idx=line.indexOf(":"); if(idx<0) continue;
+    const merc=matchMercado(line.slice(0,idx));
+    for(const c of line.slice(idx+1).split(/[\s,;]+/).filter(Boolean)) mapa[normCli(c)]=merc;
+  }
+  return mapa;
+}
+function mercadoDe(cliente){ return mapaMerc[normCli(cliente)] || ""; }
+function grupoDe(p){
+  if(seccion==="cd") return mercadoDe(p.cliente) || "Sin mercado";
+  return p.dia || "";
+}
+function ordenGrupo(g){
+  if(seccion==="cd"){ const i=MERCADOS.indexOf(g); return i<0?999:i; }
+  if(seccion==="res"){ const i=ORDEN_DIAS.indexOf(g); return i<0?999:i; }
+  return 0;
+}
+function labelGrupo(g){
+  if(seccion==="res") return DIA_NOMBRE[g] || "Sin día";
+  if(seccion==="cm")  return g || "Sin fecha";
+  const i=MERCADOS.indexOf(g);
+  return i>=0 ? (i+1)+". "+g : g;
+}
+
+/* ====== Parser RES (día + cámara) ====== */
+function parsearRes(texto){
   const out=[]; let dia="";
-  const lineas = texto.split(/\r?\n/);
-  for(let raw of lineas){
+  for(let raw of texto.split(/\r?\n/)){
     let linea = raw.trim();
     if(!linea) continue;
-    // quitar la nota entre paréntesis pero CONSERVAR la pieza, p.ej. "(solo figura en J cám.3)"
     linea = linea.replace(/\s*\(.*$/, "").trim();
     if(!linea) continue;
-    // normalizar cámara: "cám 2"->"C2", "cámara 3"->"C3", "cám -"/"cám --"->"C-" (cualquier guion)
     linea = linea.replace(/\bc[aá]?m?(?:ara)?\.?\s*([-‐-―−]+|\d+)/gi, (m,g)=> "C"+(/\d/.test(g)?g:"-"));
     const tokens = linea.split(/[\s,;|]+/).filter(Boolean);
-    // ¿la línea es solo un día?
     if(tokens.length===1 && esDia(tokens[0])){ dia = normDia(tokens[0]); continue; }
     let diaLinea = dia, camara = "", nums = [], txt = [];
     for(let t of tokens){
       if(esDia(t)){ diaLinea = normDia(t); continue; }
       const cm = t.match(/^C([-‐-―−]+|\d+)$/i);
       if(cm){ camara = /\d/.test(cm[1]) ? cm[1] : "-"; continue; }
-      if(/^[-‐-―−]+$/.test(t)){ continue; } // marcador de peso vacío (cualquier guion)
+      if(/^[-‐-―−]+$/.test(t)){ continue; }
       if(/^\d+(\.\d+)?(kg)?$/i.test(t)){ nums.push(t); continue; }
       txt.push(t);
     }
-    // sin cámara explícita: un número suelto 1-4 (que no sea el id) se toma como cámara
-    if(!camara){
-      for(let i=1;i<nums.length;i++){
-        if(/^[1-4]$/.test(nums[i])){ camara=nums[i]; nums.splice(i,1); break; }
-      }
-    }
+    if(!camara){ for(let i=1;i<nums.length;i++){ if(/^[1-4]$/.test(nums[i])){ camara=nums[i]; nums.splice(i,1); break; } } }
     if(nums.length===0) continue;
-    out.push({
-      uid:uid(),
-      id: nums[0].replace(/kg/i,""),
-      peso: nums[1] ? nums[1].replace(/kg/i,"") : "",
-      dia: diaLinea||"",
-      camara,
-      cliente: limpiaCli(txt.filter(t=>!esNoise(t)).join(" ")),
-      marcado:false
-    });
+    out.push({ uid:uid(), id:nums[0].replace(/kg/i,""), peso:nums[1]?nums[1].replace(/kg/i,""):"",
+      dia:diaLinea||"", camara, cliente:limpiaCli(txt.filter(t=>!esNoise(t)).join(" ")), marcado:false });
   }
   return out;
 }
-function esDia(t){ return ORDEN_DIAS.includes(normDia(t)); }
-function normDia(t){ return t.toUpperCase().replace(/[.\-]/g,""); }
-// limita el nombre del cliente: descarta texto irrelevante largo (máx 4 palabras / 30 caracteres)
-function limpiaCli(s){
-  let c = s.replace(/\s+/g," ").trim().split(" ").slice(0,4).join(" ");
-  return c.length>30 ? c.slice(0,30).trim() : c;
-}
-// palabras de cabecera/ruido que NO son nombre/símbolo de cliente
-const NOISE = new Set(["pieza","piezas","simb","simbolo","simbolos","camara","cam",
-  "peso","pesos","fecha","dia","cliente","clientes","nro","numero","num","total","lista","kg"]);
-function esNoise(t){
-  const x = t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]/g,"");
-  return x!=="" && NOISE.has(x);
-}
-function esc(s){ return s.replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
-/* ---------- render ---------- */
-function chipsHTML(){
-  const dias = ["todos", ...ORDEN_DIAS];
-  return dias.map(d=>{
-    const on = filtroDia===d ? "on":"";
-    const lbl = d==="todos" ? "Todos" : d;
-    return `<div class="chip ${on}" data-dia="${d}">${lbl}</div>`;
-  }).join("");
+/* ====== Parser CERDO (fecha, sin cámara) ====== */
+function parsearCerdo(texto){
+  const out=[]; let fecha="";
+  for(let raw of texto.split(/\r?\n/)){
+    let linea = raw.trim();
+    if(!linea) continue;
+    linea = linea.replace(/\s*\(.*$/, "").trim();
+    if(!linea) continue;
+    const tokens = linea.split(/[\s,;|]+/).filter(Boolean);
+    if(tokens.length===1 && esFecha(tokens[0])){ fecha = normFecha(tokens[0]); continue; }
+    let fechaLinea = fecha, nums = [], txt = [];
+    for(let t of tokens){
+      if(esFecha(t)){ fechaLinea = normFecha(t); continue; }
+      if(/^[-‐-―−]+$/.test(t)){ continue; }
+      if(/^\d+(\.\d+)?(kg)?$/i.test(t)){ nums.push(t); continue; }
+      txt.push(t);
+    }
+    if(nums.length===0) continue;
+    out.push({ uid:uid(), id:nums[0].replace(/kg/i,""), peso:nums[1]?nums[1].replace(/kg/i,""):"",
+      dia:fechaLinea||"", camara:"", cliente:limpiaCli(txt.filter(t=>!esNoise(t)).join(" ")), marcado:false });
+  }
+  return out;
 }
+function parsear(texto){ return seccion==="res" ? parsearRes(texto) : parsearCerdo(texto); }
+
+/* ====== Chips ====== */
 function camsPresentes(){
-  const set = new Set();
-  piezas.forEach(p=>{ if(p.camara) set.add(p.camara); });
-  return [...set].sort((a,b)=>{
-    if(a==="-") return 1; if(b==="-") return -1;
-    return Number(a)-Number(b);
-  });
+  const set=new Set(); piezas.forEach(p=>{ if(p.camara) set.add(p.camara); });
+  return [...set].sort((a,b)=>{ if(a==="-")return 1; if(b==="-")return -1; return Number(a)-Number(b); });
 }
 function chipsCamHTML(){
-  const cams = camsPresentes();
-  if(cams.length===0) return "";
-  let h = `<span class="cont" style="align-self:center">Cám:</span>`;
-  h += `<div class="chip ${filtroCam==='todas'?'on':''}" data-cam="todas">Todas</div>`;
-  h += cams.map(c=>{
-    const lbl = c==="-" ? "Sin cám" : "C"+c;
-    return `<div class="chip ${filtroCam===c?'on':''}" data-cam="${c}">${lbl}</div>`;
-  }).join("");
+  const cams=camsPresentes(); if(cams.length===0) return "";
+  let h=`<span class="cont" style="align-self:center">Cám:</span>`;
+  h+=`<div class="chip ${filtroCam==='todas'?'on':''}" data-cam="todas">Todas</div>`;
+  h+=cams.map(c=>`<div class="chip ${filtroCam===c?'on':''}" data-cam="${c}">${c==='-'?'Sin cám':'C'+c}</div>`).join("");
   return h;
 }
-
-function render(){
-  document.getElementById("chips").innerHTML = chipsHTML();
-  const camHTML = chipsCamHTML();
+function gruposPresentes(){
+  if(seccion==="cm"){
+    return [...new Set(piezas.map(p=>p.dia).filter(Boolean))].sort((a,b)=>fechaVal(b)-fechaVal(a));
+  }
+  if(seccion==="cd"){
+    const set=new Set(piezas.map(p=>grupoDe(p)));
+    const ord=MERCADOS.filter(m=>set.has(m));
+    if(set.has("Sin mercado")) ord.push("Sin mercado");
+    return ord;
+  }
+  return ORDEN_DIAS;
+}
+function construirChips(){
+  let items=[{val:"todos",label:"Todos"}];
+  for(const g of gruposPresentes()){
+    let lbl = seccion==="res" ? g : (seccion==="cm" ? g : (MERC_CORTO[g]||g));
+    items.push({val:g, label:lbl});
+  }
+  document.getElementById("chips").innerHTML = items.map(it=>
+    `<div class="chip ${filtroPrim===it.val?'on':''}" data-prim="${esc(it.val)}">${esc(it.label)}</div>`).join("");
+  const camHTML = seccion==="res" ? chipsCamHTML() : "";
   document.getElementById("chipsCam").innerHTML = camHTML;
   document.getElementById("rowCam").style.display = camHTML ? "flex" : "none";
+}
+
+/* ====== Render ====== */
+function render(){
+  document.getElementById("seccion").value = seccion;
+  construirChips();
   const cont = document.getElementById("lista");
 
   let vis = piezas.filter(p=>!p.marcado);
-  if(filtroDia!=="todos") vis = vis.filter(p=>p.dia===filtroDia);
-  if(filtroCam!=="todas") vis = vis.filter(p=>p.camara===filtroCam);
+  if(filtroPrim!=="todos") vis = vis.filter(p=>grupoDe(p)===filtroPrim);
+  if(seccion==="res" && filtroCam!=="todas") vis = vis.filter(p=>p.camara===filtroCam);
   if(q) vis = vis.filter(p=>p.id.includes(q));
 
-  // contador (respeta filtros de día y cámara)
   let base = piezas;
-  if(filtroDia!=="todos") base = base.filter(p=>p.dia===filtroDia);
-  if(filtroCam!=="todas") base = base.filter(p=>p.camara===filtroCam);
+  if(filtroPrim!=="todos") base = base.filter(p=>grupoDe(p)===filtroPrim);
+  if(seccion==="res" && filtroCam!=="todas") base = base.filter(p=>p.camara===filtroCam);
   const faltan = base.filter(p=>!p.marcado).length;
   document.getElementById("contador").innerHTML = `Faltan <b>${faltan}</b> de ${base.length}`;
 
   if(vis.length===0){
-    cont.innerHTML = `<div class="vacio">${piezas.length===0
-      ? "No hay piezas. Toca ☰ → Importar lista."
-      : "✅ Nada pendiente aquí."}</div>`;
+    let msg;
+    if(piezas.length===0){
+      msg = "No hay piezas. Toca ☰ → Importar lista.";
+      if(seccion==="cd" && Object.keys(mapaMerc).length===0)
+        msg = "No hay piezas. Configura ☰ → Mercados y luego importa.";
+    } else { msg = "✅ Nada pendiente aquí."; }
+    cont.innerHTML = `<div class="vacio">${msg}</div>`;
     return;
   }
 
-  // ordenar por día y luego por número ascendente
   vis.sort((a,b)=>{
-    const da=ORDEN_DIAS.indexOf(a.dia), db=ORDEN_DIAS.indexOf(b.dia);
-    if(da!==db) return da-db;
+    const ga=grupoDe(a), gb=grupoDe(b);
+    if(seccion==="cm"){
+      const fa=fechaVal(a.dia), fb=fechaVal(b.dia);
+      if(fa!==fb) return fb-fa;
+      return Number(a.id)-Number(b.id);
+    }
+    const oa=ordenGrupo(ga), ob=ordenGrupo(gb);
+    if(oa!==ob) return oa-ob;
+    if(seccion==="cd"){
+      const ca=a.cliente||"", cb=b.cliente||"";
+      if(ca!==cb) return ca.localeCompare(cb);
+    }
     return Number(a.id)-Number(b.id);
   });
 
-  let html=""; let diaActual=" ";
+  let html=""; let grupoActual=" ";
   for(const p of vis){
-    if(filtroDia==="todos" && p.dia!==diaActual){
-      diaActual=p.dia;
-      html += `<div class="diahdr">${DIA_NOMBRE[p.dia]||"Sin día"}</div>`;
+    if(filtroPrim==="todos"){
+      const g=grupoDe(p);
+      if(g!==grupoActual){ grupoActual=g; html += `<div class="diahdr">${esc(labelGrupo(g))}</div>`; }
     }
     const cliente = p.cliente
-      ? `<span class="cliente">${esc(p.cliente).replace(/\*/g,'<span class="ast">*</span>')}</span>`
-      : "";
-    const dia = p.dia ? `<span class="dia">${p.dia}</span>` : "";
-    const peso = p.peso ? `<span class="peso">${p.peso} kg</span>` : "";
-    // cámara al final; si no está ubicada (C-) o no hay dato, se ignora
-    const cam = (p.camara && p.camara!=="-") ? `<span class="cam">C${p.camara}</span>` : "";
-    html += `<div class="pieza" data-uid="${p.uid}">
-      <span class="num">${p.id}</span>${cliente}${dia}${peso}${cam}
-    </div>`;
+      ? `<span class="cliente">${esc(p.cliente).replace(/\*/g,'<span class="ast">*</span>')}</span>` : "";
+    const per = p.dia ? `<span class="dia">${esc(p.dia)}</span>` : "";
+    const peso = p.peso ? `<span class="peso">${esc(p.peso)} kg</span>` : "";
+    const cam = (seccion==="res" && p.camara && p.camara!=="-") ? `<span class="cam">C${esc(p.camara)}</span>` : "";
+    html += `<div class="pieza" data-uid="${p.uid}"><span class="num">${esc(p.id)}</span>${cliente}${per}${peso}${cam}</div>`;
   }
   cont.innerHTML = html;
 }
 
-/* ---------- acciones ---------- */
+/* ====== Marcar / Despachar ====== */
 const enProgreso = new Set();
 function marcar(u){
   const p = piezas.find(x=>x.uid===u);
@@ -348,57 +441,84 @@ function marcar(u){
   const el = document.querySelector('.pieza[data-uid="'+u+'"]');
   let fired=false;
   const fin = ()=>{ if(fired) return; fired=true; enProgreso.delete(u); aplicarMarca(u); };
-  if(el){
-    el.classList.add("marcando");
-    el.addEventListener("animationend", fin, {once:true});
-    setTimeout(fin, 680); // respaldo por si no dispara animationend
-  } else { fin(); }
+  if(el){ el.classList.add("marcando"); el.addEventListener("animationend", fin, {once:true}); setTimeout(fin, 680); }
+  else { fin(); }
 }
 function aplicarMarca(u){
   const p = piezas.find(x=>x.uid===u); if(!p) return;
   p.marcado = true; guardar(); render();
   undoUid = u;
-  const t=document.getElementById("toast");
+  document.getElementById("toastAccion").textContent = seccion==="cd" ? "Despachado" : "Marcado";
   document.getElementById("toastNum").textContent = p.id;
-  t.style.display="flex";
+  document.getElementById("toast").style.display="flex";
   clearTimeout(window._tt);
-  window._tt = setTimeout(()=>{ t.style.display="none"; undoUid=null; }, 5000);
+  window._tt = setTimeout(()=>{ document.getElementById("toast").style.display="none"; undoUid=null; }, 5000);
 }
 function desmarcar(u){
   const p = piezas.find(x=>x.uid===u); if(!p) return;
   p.marcado=false; guardar(); render(); renderMarcados();
 }
 
-/* ---------- marcados ---------- */
+/* ====== Hechos (marcados/despachados) ====== */
 function renderMarcados(){
+  document.getElementById("tituloMarcados").textContent = seccion==="cd" ? "Despachados" : "Marcados";
   const c=document.getElementById("listaMarcados");
   const m=piezas.filter(p=>p.marcado).sort((a,b)=>Number(a.id)-Number(b.id));
-  if(m.length===0){ c.innerHTML=`<p>No hay piezas marcadas.</p>`; return; }
+  if(m.length===0){ c.innerHTML=`<p>Nada aún.</p>`; return; }
   c.innerHTML = m.map(p=>`<div class="mk">
-    <span class="num">${p.id}</span>
-    <span class="meta">${p.cliente?p.cliente+" · ":""}${p.dia||""}${p.peso?" · "+p.peso+" kg":""}${(p.camara&&p.camara!=="-")?" · C"+p.camara:""}</span>
+    <span class="num">${esc(p.id)}</span>
+    <span class="meta">${p.cliente?esc(p.cliente)+" · ":""}${esc(p.dia||"")}${p.peso?" · "+esc(p.peso)+" kg":""}${(p.camara&&p.camara!=="-")?" · C"+esc(p.camara):""}${seccion==="cd"?" · "+esc(mercadoDe(p.cliente)||"Sin mercado"):""}</span>
     <button class="btnd" data-undo="${p.uid}">Deshacer</button>
   </div>`).join("");
 }
 
-/* ---------- eventos ---------- */
+/* ====== Ayuda de importación ====== */
+function actualizarAyuda(){
+  const a=document.getElementById("ayudaImport");
+  const t=document.getElementById("tituloImport");
+  if(seccion==="res"){
+    t.textContent="Importar Res (marcado)";
+    a.innerHTML=`<p>Pega el OCR. Formato:</p><pre>V
+1234 C2
+1240 C1
+J
+1560 C3</pre><p>Línea con la letra del día (<code>L M MI J V</code>) inicia bloque. Pieza: <code>número cámara</code> (peso opcional). Cámara <code>C1</code>–<code>C4</code> o <code>C-</code> si no está.</p>`;
+  } else if(seccion==="cm"){
+    t.textContent="Importar Cerdo (marcado)";
+    a.innerHTML=`<p>Pega el OCR. Formato:</p><pre>30/06
+1234 H
+1240 F
+01/07
+1560 H</pre><p>Línea con la fecha (<code>30/06</code>) inicia bloque. Pieza: <code>número cliente</code> (peso opcional). El cerdo no usa cámara.</p>`;
+  } else {
+    t.textContent="Importar Cerdo (despacho)";
+    a.innerHTML=`<p>Pega el OCR. Formato:</p><pre>30/06
+1234 H
+1240 F</pre><p>Pieza: <code>número cliente</code> (fecha opcional). El <b>mercado se asigna solo</b> según la tabla de Mercados (☰ → Mercados). Config&uacute;rala primero.</p>`;
+  }
+}
+
+/* ====== Eventos ====== */
+document.getElementById("seccion").addEventListener("change", e=>{
+  seccion = e.target.value; localStorage.setItem("seccion", seccion);
+  piezas = DB[seccion];
+  filtroPrim="todos"; filtroCam="todas"; q="";
+  document.getElementById("buscar").value="";
+  render();
+});
 document.getElementById("lista").addEventListener("click", e=>{
   const el = e.target.closest(".pieza"); if(el) marcar(el.dataset.uid);
 });
 document.getElementById("chips").addEventListener("click", e=>{
   const el=e.target.closest(".chip"); if(!el) return;
-  filtroDia = el.dataset.dia; render();
+  filtroPrim = el.dataset.prim; render();
 });
 document.getElementById("chipsCam").addEventListener("click", e=>{
   const el=e.target.closest(".chip"); if(!el) return;
   filtroCam = el.dataset.cam; render();
 });
-document.getElementById("buscar").addEventListener("input", e=>{
-  q = e.target.value.replace(/\D/g,""); render();
-});
-document.getElementById("limpiarBuscar").addEventListener("click", ()=>{
-  q=""; document.getElementById("buscar").value=""; render();
-});
+document.getElementById("buscar").addEventListener("input", e=>{ q = e.target.value.replace(/\D/g,""); render(); });
+document.getElementById("limpiarBuscar").addEventListener("click", ()=>{ q=""; document.getElementById("buscar").value=""; render(); });
 document.getElementById("deshacer").addEventListener("click", ()=>{
   if(undoUid) desmarcar(undoUid);
   document.getElementById("toast").style.display="none"; undoUid=null;
@@ -407,23 +527,30 @@ document.getElementById("deshacer").addEventListener("click", ()=>{
 function abrir(id){ document.getElementById(id).classList.add("open"); }
 function cerrar(id){ document.getElementById(id).classList.remove("open"); }
 document.getElementById("menuBtn").onclick = ()=>abrir("modalMenu");
-document.getElementById("abrirImportar").onclick = ()=>{ cerrar("modalMenu"); abrir("modalImportar"); };
+document.getElementById("abrirImportar").onclick = ()=>{ cerrar("modalMenu"); actualizarAyuda(); abrir("modalImportar"); };
 document.getElementById("cerrarImportar").onclick = ()=>cerrar("modalImportar");
 document.getElementById("abrirMarcados").onclick = ()=>{ cerrar("modalMenu"); renderMarcados(); abrir("modalMarcados"); };
 document.getElementById("cerrarMarcados").onclick = ()=>cerrar("modalMarcados");
 document.getElementById("listaMarcados").addEventListener("click", e=>{
   const b=e.target.closest("[data-undo]"); if(b) desmarcar(b.dataset.undo);
 });
+document.getElementById("abrirMercados").onclick = ()=>{ cerrar("modalMenu"); document.getElementById("textoMerc").value=mercTxt; abrir("modalMercados"); };
+document.getElementById("cerrarMercados").onclick = ()=>cerrar("modalMercados");
+document.getElementById("guardarMerc").onclick = ()=>{
+  mercTxt = document.getElementById("textoMerc").value;
+  localStorage.setItem("mercTxt", mercTxt);
+  mapaMerc = parsearMerc(mercTxt);
+  cerrar("modalMercados"); render();
+  alert("Mercados guardados: "+Object.keys(mapaMerc).length+" clientes asignados.");
+};
 
 document.getElementById("hacerImportar").onclick = ()=>{
   const txt = document.getElementById("texto").value;
   const nuevas = parsear(txt);
   if(nuevas.length===0){ alert("No se reconocieron piezas. Revisa el formato."); return; }
-  const modo = document.querySelector('input[name=modo]:checked').value;
-  // descartar duplicados solo si es el MISMO número y el MISMO día
-  // (mismo número en día distinto SÍ se añade: es otra fecha)
+  const modoImp = document.querySelector('input[name=modoImp]:checked').value;
   const clave = p => p.id + "|" + (p.dia||"");
-  const existentes = new Set(modo==="repl" ? [] : piezas.map(clave));
+  const existentes = new Set(modoImp==="repl" ? [] : piezas.map(clave));
   const vistos = new Set();
   const limpias = []; let descartadas = 0;
   for(const p of nuevas){
@@ -431,27 +558,26 @@ document.getElementById("hacerImportar").onclick = ()=>{
     if(existentes.has(k) || vistos.has(k)){ descartadas++; continue; }
     vistos.add(k); limpias.push(p);
   }
-  piezas = modo==="repl" ? limpias : piezas.concat(limpias);
+  piezas = modoImp==="repl" ? limpias : piezas.concat(limpias);
   guardar();
   document.getElementById("texto").value="";
   cerrar("modalImportar"); render();
   alert("Importadas "+limpias.length+" piezas."
-    + (descartadas? "\nDescartadas "+descartadas+" repetidas (mismo número y día).":""));
+    + (descartadas? "\nDescartadas "+descartadas+" repetidas (mismo número y fecha/día).":""));
 };
 document.getElementById("borrarMarcados").onclick = ()=>{
-  if(!confirm("¿Borrar las piezas ya marcadas?")) return;
+  if(!confirm("¿Borrar lo ya hecho de esta sección?")) return;
   piezas = piezas.filter(p=>!p.marcado); guardar(); cerrar("modalMenu"); render();
 };
 document.getElementById("borrarTodo").onclick = ()=>{
-  if(!confirm("¿Borrar TODAS las piezas?")) return;
+  if(!confirm("¿Borrar TODAS las piezas de esta sección?")) return;
   piezas=[]; guardar(); cerrar("modalMenu"); render();
 };
-// cerrar modal tocando el fondo
 document.querySelectorAll(".modal").forEach(m=>{
   m.addEventListener("click", e=>{ if(e.target===m) m.classList.remove("open"); });
 });
 
-/* ---------- service worker (offline + auto-actualización) ---------- */
+/* ====== Service worker (offline + auto-actualización) ====== */
 if("serviceWorker" in navigator){
   navigator.serviceWorker.register("sw.js").then(reg=>{ reg.update(); }).catch(()=>{});
   let recargando=false;
