@@ -1,4 +1,4 @@
-const CACHE = "camal-v1";
+const CACHE = "camal-v2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -21,16 +21,16 @@ self.addEventListener("activate", e => {
   self.clients.claim();
 });
 
-// cache-first: funciona 100% sin internet
+// network-first: con señal carga SIEMPRE lo último; sin señal usa la copia guardada
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
   e.respondWith(
-    caches.match(e.request).then(hit =>
-      hit || fetch(e.request).then(res => {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
-        return res;
-      }).catch(() => caches.match("./index.html"))
+    fetch(e.request).then(res => {
+      const copy = res.clone();
+      caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+      return res;
+    }).catch(() =>
+      caches.match(e.request).then(hit => hit || caches.match("./index.html"))
     )
   );
 });
