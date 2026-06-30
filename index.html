@@ -154,7 +154,7 @@
       <button class="btnd" id="borrarTodo">Borrar TODO</button>
     </div>
     <p style="margin-top:14px">Los datos se guardan en este celular y funcionan sin internet. Cada sección (Res / Cerdo marcar / Cerdo despachar) tiene su propia lista.</p>
-    <p style="margin-top:4px; font-size:12px; color:var(--muted)">Versión <b>v14 · cerdo</b> · 30-jun</p>
+    <p style="margin-top:4px; font-size:12px; color:var(--muted)">Versión <b>v15 · cerdo</b> · 30-jun</p>
   </div>
 </div>
 
@@ -226,6 +226,7 @@ let mercTxt = localStorage.getItem("mercTxt") || "";
 let mapaMerc = parsearMerc(mercTxt);
 let filtroPrim = "todos";
 let filtroCam = "todas";
+let filtroFecha = "todas";
 let q = "";
 let undoUid = null;
 
@@ -239,9 +240,9 @@ function normCli(c){ return (c||"").toString().toLowerCase().normalize("NFD").re
 const NOISE = new Set(["pieza","piezas","simb","simbolo","simbolos","camara","cam",
   "peso","pesos","fecha","dia","cliente","clientes","nro","numero","num","total","lista","kg"]);
 function esNoise(t){ const x=norm(t); return x!=="" && NOISE.has(x); }
-function limpiaCli(s){
-  let c = s.replace(/\s+/g," ").trim().split(" ").slice(0,4).join(" ");
-  return c.length>30 ? c.slice(0,30).trim() : c;
+function limpiaCli(s, maxW=4, maxC=30){
+  let c = s.replace(/\s+/g," ").trim().split(" ").slice(0,maxW).join(" ");
+  return c.length>maxC ? c.slice(0,maxC).trim() : c;
 }
 function esDia(t){ return ORDEN_DIAS.includes(normDia(t)); }
 function normDia(t){ return t.toUpperCase().replace(/[.\-]/g,""); }
@@ -329,7 +330,7 @@ function parsearCerdo(texto){
     }
     if(nums.length===0) continue;
     out.push({ uid:uid(), id:nums[0].replace(/kg/i,""), peso:nums[1]?nums[1].replace(/kg/i,""):"",
-      dia:fechaLinea||"", camara:"", cliente:limpiaCli(txt.filter(t=>!esNoise(t)).join(" ")), marcado:false });
+      dia:fechaLinea||"", camara:"", cliente:limpiaCli(txt.filter(t=>!esNoise(t)).join(" "), 6, 40), marcado:false });
   }
   return out;
 }
@@ -345,6 +346,14 @@ function chipsCamHTML(){
   let h=`<span class="cont" style="align-self:center">Cám:</span>`;
   h+=`<div class="chip ${filtroCam==='todas'?'on':''}" data-cam="todas">Todas</div>`;
   h+=cams.map(c=>`<div class="chip ${filtroCam===c?'on':''}" data-cam="${c}">${c==='-'?'Sin cám':'C'+c}</div>`).join("");
+  return h;
+}
+function fechasPresentes(){ return [...new Set(piezas.map(p=>p.dia).filter(Boolean))].sort((a,b)=>fechaVal(b)-fechaVal(a)); }
+function chipsFechaHTML(){
+  const fs=fechasPresentes(); if(fs.length===0) return "";
+  let h=`<span class="cont" style="align-self:center">Fecha:</span>`;
+  h+=`<div class="chip ${filtroFecha==='todas'?'on':''}" data-fecha="todas">Todas</div>`;
+  h+=fs.map(f=>`<div class="chip ${filtroFecha===f?'on':''}" data-fecha="${esc(f)}">${esc(f)}</div>`).join("");
   return h;
 }
 function gruposPresentes(){
@@ -367,9 +376,11 @@ function construirChips(){
   }
   document.getElementById("chips").innerHTML = items.map(it=>
     `<div class="chip ${filtroPrim===it.val?'on':''}" data-prim="${esc(it.val)}">${esc(it.label)}</div>`).join("");
-  const camHTML = seccion==="res" ? chipsCamHTML() : "";
-  document.getElementById("chipsCam").innerHTML = camHTML;
-  document.getElementById("rowCam").style.display = camHTML ? "flex" : "none";
+  let secHTML = "";
+  if(seccion==="res") secHTML = chipsCamHTML();
+  else if(seccion==="cd") secHTML = chipsFechaHTML();
+  document.getElementById("chipsCam").innerHTML = secHTML;
+  document.getElementById("rowCam").style.display = secHTML ? "flex" : "none";
 }
 
 /* ====== Render ====== */
@@ -381,11 +392,13 @@ function render(){
   let vis = piezas.filter(p=>!p.marcado);
   if(filtroPrim!=="todos") vis = vis.filter(p=>grupoDe(p)===filtroPrim);
   if(seccion==="res" && filtroCam!=="todas") vis = vis.filter(p=>p.camara===filtroCam);
+  if(seccion==="cd" && filtroFecha!=="todas") vis = vis.filter(p=>p.dia===filtroFecha);
   if(q) vis = vis.filter(p=>p.id.includes(q));
 
   let base = piezas;
   if(filtroPrim!=="todos") base = base.filter(p=>grupoDe(p)===filtroPrim);
   if(seccion==="res" && filtroCam!=="todas") base = base.filter(p=>p.camara===filtroCam);
+  if(seccion==="cd" && filtroFecha!=="todas") base = base.filter(p=>p.dia===filtroFecha);
   const faltan = base.filter(p=>!p.marcado).length;
   document.getElementById("contador").innerHTML = `Faltan <b>${faltan}</b> de ${base.length}`;
 
@@ -502,7 +515,7 @@ J
 document.getElementById("seccion").addEventListener("change", e=>{
   seccion = e.target.value; localStorage.setItem("seccion", seccion);
   piezas = DB[seccion];
-  filtroPrim="todos"; filtroCam="todas"; q="";
+  filtroPrim="todos"; filtroCam="todas"; filtroFecha="todas"; q="";
   document.getElementById("buscar").value="";
   render();
 });
@@ -515,7 +528,9 @@ document.getElementById("chips").addEventListener("click", e=>{
 });
 document.getElementById("chipsCam").addEventListener("click", e=>{
   const el=e.target.closest(".chip"); if(!el) return;
-  filtroCam = el.dataset.cam; render();
+  if(el.dataset.cam!==undefined) filtroCam = el.dataset.cam;
+  else if(el.dataset.fecha!==undefined) filtroFecha = el.dataset.fecha;
+  render();
 });
 document.getElementById("buscar").addEventListener("input", e=>{ q = e.target.value.replace(/\D/g,""); render(); });
 document.getElementById("limpiarBuscar").addEventListener("click", ()=>{ q=""; document.getElementById("buscar").value=""; render(); });
