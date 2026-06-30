@@ -46,13 +46,19 @@
   .diahdr{position:sticky; top:0; background:var(--bg); color:var(--muted);
     font-size:12px; letter-spacing:1px; font-weight:700; text-transform:uppercase;
     padding:8px 4px 4px; border-bottom:1px solid var(--borde)}
-  .pieza{display:flex; align-items:center; gap:10px; padding:9px 10px;
-    border-left:5px solid var(--rojo); background:var(--rojo-bg);
-    border-radius:8px; margin:4px 0; cursor:pointer; animation:fadein .12s}
+  .pieza{display:flex; flex-direction:column; gap:6px; padding:11px 12px;
+    border-left:6px solid var(--rojo); background:var(--rojo-bg);
+    border-radius:8px; margin:6px 0; cursor:pointer; animation:fadein .12s}
   .pieza:active{filter:brightness(1.25)}
-  .num{font-size:19px; font-weight:700; letter-spacing:.5px; min-width:62px}
-  .meta{font-size:12px; color:var(--muted); margin-left:auto; text-align:right; line-height:1.25}
-  .meta .pe{color:#cfd5e0}
+  .linea1{display:flex; align-items:center; gap:10px}
+  .num{font-size:26px; font-weight:800; letter-spacing:.5px}
+  .cam{font-size:18px; font-weight:700; padding:4px 13px; border-radius:8px;
+    margin-left:auto; background:#23304a; color:#9ec1ff; border:1px solid #3a5a93; white-space:nowrap}
+  .cam.camno{background:#3a2a2a; color:#f0a3a3; border-color:#6a3a3a}
+  .linea2{display:flex; align-items:center; gap:16px; flex-wrap:wrap; font-size:18px}
+  .peso{color:#fff; font-weight:700}
+  .cliente{color:#dfe5f0; font-weight:500}
+  .mk .meta{font-size:13px; color:var(--muted)}
   .vacio{color:var(--muted); text-align:center; padding:40px 10px; font-size:15px}
   @keyframes fadein{from{opacity:0} to{opacity:1}}
 
@@ -102,6 +108,9 @@
     <div class="chips" id="chips"></div>
     <div class="cont" id="contador">Faltan <b>0</b> de 0</div>
   </div>
+  <div class="row2" id="rowCam" style="display:none">
+    <div class="chips" id="chipsCam"></div>
+  </div>
 </header>
 
 <main id="lista"></main>
@@ -133,12 +142,14 @@
     <h2>Importar lista del día</h2>
     <p>Pega el texto del OCR de Claude. Formato:</p>
     <pre>V
-1234 185
-1240 192
+1234 185 C2
+1240 190 C1
+1255 - C-
 J
-1567 90</pre>
+1560 88 C3</pre>
     <p>Una línea con solo la letra del día (<code>L M MI J V</code>) inicia un bloque.
-       Luego cada pieza: <code>número peso</code>. También vale <code>1234 185 V</code> por línea.</p>
+       Cada pieza: <code>número peso cámara</code>. El peso es opcional (<code>1234 C2</code> también vale).
+       Cámara: <code>C1</code>…<code>C4</code>, y <code>C-</code> si no está ubicada.</p>
     <textarea id="texto" placeholder="Pega aquí…"></textarea>
     <label style="display:block; margin-top:8px; font-size:13px; color:var(--muted)">
       <input type="radio" name="modo" value="add" checked /> Agregar a lo existente
@@ -164,10 +175,11 @@ J
 </div>
 
 <script>
-const ORDEN_DIAS = ["L","M","MI","J","V"];
+const ORDEN_DIAS = ["V","J","MI","M","L"]; // bloques: día más reciente primero
 const DIA_NOMBRE = {L:"Lunes", M:"Martes", MI:"Miércoles", J:"Jueves", V:"Viernes"};
 let piezas = cargar();
 let filtroDia = "todos";
+let filtroCam = "todas";
 let q = "";
 let undoUid = null;
 
@@ -181,27 +193,32 @@ function parsear(texto){
   const out=[]; let dia="";
   const lineas = texto.split(/\r?\n/);
   for(let raw of lineas){
-    const linea = raw.trim();
+    let linea = raw.trim();
     if(!linea) continue;
+    // normalizar cámara: "cám 2"->"C2", "cámara 3"->"C3", "cám -"->"C-"
+    linea = linea.replace(/\bc[aá]?m?(?:ara)?\.?\s*(-+|\d+)/gi, (m,g)=> "C"+(/\d/.test(g)?g:"-"));
     const tokens = linea.split(/[\s,;|]+/).filter(Boolean);
     // ¿la línea es solo un día?
-    const soloDia = tokens.length===1 && esDia(tokens[0]);
-    if(soloDia){ dia = normDia(tokens[0]); continue; }
-    // buscar token de día dentro de la línea
-    let diaLinea = dia;
-    let resto = [];
-    for(const t of tokens){
-      if(esDia(t)) diaLinea = normDia(t);
-      else resto.push(t);
+    if(tokens.length===1 && esDia(tokens[0])){ dia = normDia(tokens[0]); continue; }
+    let diaLinea = dia, camara = "", nums = [], txt = [];
+    for(let t of tokens){
+      if(esDia(t)){ diaLinea = normDia(t); continue; }
+      const cm = t.match(/^C(-+|\d+)$/i);
+      if(cm){ camara = /\d/.test(cm[1]) ? cm[1] : "-"; continue; }
+      if(t==="-"){ continue; } // marcador de peso vacío
+      if(/^\d+(\.\d+)?(kg)?$/i.test(t)){ nums.push(t); continue; }
+      txt.push(t);
     }
-    // de los restantes: numéricos -> id, peso ; texto -> cliente
-    const nums = resto.filter(t=>/^\d+(\.\d+)?(kg)?$/i.test(t));
-    const txt  = resto.filter(t=>!/^\d+(\.\d+)?(kg)?$/i.test(t));
     if(nums.length===0) continue;
-    const id = nums[0].replace(/kg/i,"");
-    const peso = nums[1] ? nums[1].replace(/kg/i,"") : "";
-    const cliente = txt.join(" ");
-    out.push({uid:uid(), id, peso, dia:diaLinea||"", cliente, marcado:false});
+    out.push({
+      uid:uid(),
+      id: nums[0].replace(/kg/i,""),
+      peso: nums[1] ? nums[1].replace(/kg/i,"") : "",
+      dia: diaLinea||"",
+      camara,
+      cliente: txt.join(" "),
+      marcado:false
+    });
   }
   return out;
 }
@@ -217,19 +234,44 @@ function chipsHTML(){
     return `<div class="chip ${on}" data-dia="${d}">${lbl}</div>`;
   }).join("");
 }
+function camsPresentes(){
+  const set = new Set();
+  piezas.forEach(p=>{ if(p.camara) set.add(p.camara); });
+  return [...set].sort((a,b)=>{
+    if(a==="-") return 1; if(b==="-") return -1;
+    return Number(a)-Number(b);
+  });
+}
+function chipsCamHTML(){
+  const cams = camsPresentes();
+  if(cams.length===0) return "";
+  let h = `<span class="cont" style="align-self:center">Cám:</span>`;
+  h += `<div class="chip ${filtroCam==='todas'?'on':''}" data-cam="todas">Todas</div>`;
+  h += cams.map(c=>{
+    const lbl = c==="-" ? "Sin cám" : "C"+c;
+    return `<div class="chip ${filtroCam===c?'on':''}" data-cam="${c}">${lbl}</div>`;
+  }).join("");
+  return h;
+}
 
 function render(){
   document.getElementById("chips").innerHTML = chipsHTML();
+  const camHTML = chipsCamHTML();
+  document.getElementById("chipsCam").innerHTML = camHTML;
+  document.getElementById("rowCam").style.display = camHTML ? "flex" : "none";
   const cont = document.getElementById("lista");
 
   let vis = piezas.filter(p=>!p.marcado);
   if(filtroDia!=="todos") vis = vis.filter(p=>p.dia===filtroDia);
+  if(filtroCam!=="todas") vis = vis.filter(p=>p.camara===filtroCam);
   if(q) vis = vis.filter(p=>p.id.includes(q));
 
-  // contador
-  const totalDia = piezas.filter(p=> filtroDia==="todos"||p.dia===filtroDia);
-  const faltan = totalDia.filter(p=>!p.marcado).length;
-  document.getElementById("contador").innerHTML = `Faltan <b>${faltan}</b> de ${totalDia.length}`;
+  // contador (respeta filtros de día y cámara)
+  let base = piezas;
+  if(filtroDia!=="todos") base = base.filter(p=>p.dia===filtroDia);
+  if(filtroCam!=="todas") base = base.filter(p=>p.camara===filtroCam);
+  const faltan = base.filter(p=>!p.marcado).length;
+  document.getElementById("contador").innerHTML = `Faltan <b>${faltan}</b> de ${base.length}`;
 
   if(vis.length===0){
     cont.innerHTML = `<div class="vacio">${piezas.length===0
@@ -251,14 +293,18 @@ function render(){
       diaActual=p.dia;
       html += `<div class="diahdr">${DIA_NOMBRE[p.dia]||"Sin día"}</div>`;
     }
-    const meta = [
-      p.peso ? `<span class="pe">${p.peso} kg</span>` : "",
-      filtroDia!=="todos" ? "" : "",
-      p.cliente ? `<div>${p.cliente}</div>` : ""
-    ].filter(Boolean).join(" ");
+    const cam = p.camara
+      ? (p.camara==="-"
+          ? `<span class="cam camno">No ubicada</span>`
+          : `<span class="cam">Cámara ${p.camara}</span>`)
+      : "";
+    const l2 = [];
+    if(p.peso) l2.push(`<span class="peso">${p.peso} kg</span>`);
+    if(p.cliente) l2.push(`<span class="cliente">${p.cliente}</span>`);
+    const linea2 = l2.length ? `<div class="linea2">${l2.join("")}</div>` : "";
     html += `<div class="pieza" data-uid="${p.uid}">
-      <span class="num">${p.id}</span>
-      <span class="meta">${meta||""}</span>
+      <div class="linea1"><span class="num">${p.id}</span>${cam}</div>
+      ${linea2}
     </div>`;
   }
   cont.innerHTML = html;
@@ -287,7 +333,7 @@ function renderMarcados(){
   if(m.length===0){ c.innerHTML=`<p>No hay piezas marcadas.</p>`; return; }
   c.innerHTML = m.map(p=>`<div class="mk">
     <span class="num">${p.id}</span>
-    <span class="meta">${p.dia||""} ${p.peso?p.peso+" kg":""}</span>
+    <span class="meta">${p.dia||""}${p.camara?(p.camara==="-"?" · s/cám":" · C"+p.camara):""}${p.peso?" · "+p.peso+" kg":""}${p.cliente?" · "+p.cliente:""}</span>
     <button class="btnd" data-undo="${p.uid}">Deshacer</button>
   </div>`).join("");
 }
@@ -299,6 +345,10 @@ document.getElementById("lista").addEventListener("click", e=>{
 document.getElementById("chips").addEventListener("click", e=>{
   const el=e.target.closest(".chip"); if(!el) return;
   filtroDia = el.dataset.dia; render();
+});
+document.getElementById("chipsCam").addEventListener("click", e=>{
+  const el=e.target.closest(".chip"); if(!el) return;
+  filtroCam = el.dataset.cam; render();
 });
 document.getElementById("buscar").addEventListener("input", e=>{
   q = e.target.value.replace(/\D/g,""); render();
