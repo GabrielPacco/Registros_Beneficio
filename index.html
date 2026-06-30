@@ -51,10 +51,10 @@
     border-radius:7px; margin:4px 0; cursor:pointer; animation:fadein .12s}
   .pieza:active{filter:brightness(1.25)}
   .num{font-size:21px; font-weight:800; letter-spacing:.5px; min-width:56px}
-  .cliente{font-size:15px; color:#dfe5f0; font-weight:500;
+  .cliente{font-size:18px; color:#eef1f7; font-weight:600;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:0 1 auto; min-width:0}
-  .dia{font-size:13px; font-weight:700; color:#d4b25e; white-space:nowrap}
-  .peso{font-size:16px; color:#fff; font-weight:700; white-space:nowrap}
+  .dia{font-size:18px; font-weight:800; color:#e6bf63; white-space:nowrap}
+  .peso{font-size:18px; color:#fff; font-weight:700; white-space:nowrap}
   .cam{font-size:15px; font-weight:700; padding:2px 9px; border-radius:6px; white-space:nowrap;
     background:#23304a; color:#9ec1ff; border:1px solid #3a5a93}
   .cam.camno{background:#3a2a2a; color:#f0a3a3; border-color:#6a3a3a}
@@ -141,7 +141,7 @@
       <button class="btnd" id="borrarTodo">Borrar TODO</button>
     </div>
     <p style="margin-top:14px">Los datos se guardan en este celular y funcionan sin internet.</p>
-    <p style="margin-top:4px; font-size:12px; color:var(--muted)">Versión <b>v8</b> · 30-jun</p>
+    <p style="margin-top:4px; font-size:12px; color:var(--muted)">Versión <b>v9</b> · 30-jun</p>
   </div>
 </div>
 
@@ -225,7 +225,7 @@ function parsear(texto){
       peso: nums[1] ? nums[1].replace(/kg/i,"") : "",
       dia: diaLinea||"",
       camara,
-      cliente: txt.join(" "),
+      cliente: limpiaCli(txt.join(" ")),
       marcado:false
     });
   }
@@ -233,6 +233,11 @@ function parsear(texto){
 }
 function esDia(t){ return ORDEN_DIAS.includes(normDia(t)); }
 function normDia(t){ return t.toUpperCase().replace(/[.\-]/g,""); }
+// limita el nombre del cliente: descarta texto irrelevante largo (máx 4 palabras / 30 caracteres)
+function limpiaCli(s){
+  let c = s.replace(/\s+/g," ").trim().split(" ").slice(0,4).join(" ");
+  return c.length>30 ? c.slice(0,30).trim() : c;
+}
 
 /* ---------- render ---------- */
 function chipsHTML(){
@@ -395,20 +400,23 @@ document.getElementById("hacerImportar").onclick = ()=>{
   const nuevas = parsear(txt);
   if(nuevas.length===0){ alert("No se reconocieron piezas. Revisa el formato."); return; }
   const modo = document.querySelector('input[name=modo]:checked').value;
-  // descartar IDs repetidos (se queda con el primero)
-  const existentes = new Set(modo==="repl" ? [] : piezas.map(p=>p.id));
+  // descartar duplicados solo si es el MISMO número y el MISMO día
+  // (mismo número en día distinto SÍ se añade: es otra fecha)
+  const clave = p => p.id + "|" + (p.dia||"");
+  const existentes = new Set(modo==="repl" ? [] : piezas.map(clave));
   const vistos = new Set();
   const limpias = []; let descartadas = 0;
   for(const p of nuevas){
-    if(existentes.has(p.id) || vistos.has(p.id)){ descartadas++; continue; }
-    vistos.add(p.id); limpias.push(p);
+    const k = clave(p);
+    if(existentes.has(k) || vistos.has(k)){ descartadas++; continue; }
+    vistos.add(k); limpias.push(p);
   }
   piezas = modo==="repl" ? limpias : piezas.concat(limpias);
   guardar();
   document.getElementById("texto").value="";
   cerrar("modalImportar"); render();
   alert("Importadas "+limpias.length+" piezas."
-    + (descartadas? "\nDescartadas "+descartadas+" repetidas (ID duplicado).":""));
+    + (descartadas? "\nDescartadas "+descartadas+" repetidas (mismo número y día).":""));
 };
 document.getElementById("borrarMarcados").onclick = ()=>{
   if(!confirm("¿Borrar las piezas ya marcadas?")) return;
