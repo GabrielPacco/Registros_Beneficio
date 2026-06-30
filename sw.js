@@ -1,4 +1,4 @@
-const CACHE = "camal-v6";
+const CACHE = "camal-v7";
 const ASSETS = [
   "./",
   "./index.html",
