@@ -154,7 +154,7 @@
       <button class="btnd" id="borrarTodo">Borrar TODO</button>
     </div>
     <p style="margin-top:14px">Los datos se guardan en este celular y funcionan sin internet. Cada sección (Res / Cerdo marcar / Cerdo despachar) tiene su propia lista.</p>
-    <p style="margin-top:4px; font-size:12px; color:var(--muted)">Versión <b>v15 · cerdo</b> · 30-jun</p>
+    <p style="margin-top:4px; font-size:12px; color:var(--muted)">Versión <b>v16 · cerdo</b> · 30-jun</p>
   </div>
 </div>
 
@@ -214,6 +214,15 @@ const ORDEN_DIAS = ["V","J","MI","M","L"];
 const DIA_NOMBRE = {L:"Lunes", M:"Martes", MI:"Miércoles", J:"Jueves", V:"Viernes"};
 const MERCADOS = ["San Camilo","Feria El Altiplano","GZ Avelino","Metro","Mercado Esperanza","Chapi","Mercado Para Todos"];
 const MERC_CORTO = {"San Camilo":"S.Camilo","Feria El Altiplano":"Altiplano","GZ Avelino":"GZ Avelino","Metro":"Metro","Mercado Esperanza":"Esperanza","Chapi":"Chapi","Mercado Para Todos":"Para Todos"};
+// Mapeo cliente→mercado PRECARGADO (el usuario lo dio). Se usa si aún no configuró la tabla.
+const DEFAULT_MERC =
+`San Camilo: ML, JN, EA, A
+Feria El Altiplano: Punto, CH, NZ, RZ, SR, RS, YC, JG, Q, ST, NY, J, JP, IG, GP, MF, MB
+GZ Avelino: GZ, FV, W, YCH
+Metro: PP, RV, TIM, CP, LUPE
+Mercado Esperanza: LR, R, D, B, LK
+Chapi: FY, Z, GV, *, AC, RCH, LA, LUZ
+Mercado Para Todos: LP, AP, CS, MMC, EK, DF, PAU, RC, EF, PAM, E, P`;
 const KEY = {res:"piezas", cm:"piezas_cm", cd:"piezas_cd"};
 
 /* ====== Estado ====== */
@@ -222,7 +231,8 @@ const DB = { res:load("piezas"), cm:load("piezas_cm"), cd:load("piezas_cd") };
 let seccion = localStorage.getItem("seccion") || "res";
 if(!KEY[seccion]) seccion="res";
 let piezas = DB[seccion];
-let mercTxt = localStorage.getItem("mercTxt") || "";
+let mercTxt = localStorage.getItem("mercTxt");
+if(mercTxt===null) mercTxt = DEFAULT_MERC;   // primera vez: usa el mapeo precargado
 let mapaMerc = parsearMerc(mercTxt);
 let filtroPrim = "todos";
 let filtroCam = "todas";
