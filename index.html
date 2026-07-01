@@ -154,7 +154,7 @@
       <button class="btnd" id="borrarTodo">Borrar TODO</button>
     </div>
     <p style="margin-top:14px">Los datos se guardan en este celular y funcionan sin internet. Cada sección (Res / Cerdo marcar / Cerdo despachar) tiene su propia lista.</p>
-    <p style="margin-top:4px; font-size:12px; color:var(--muted)">Versión <b>v17 · cerdo</b> · 30-jun</p>
+    <p style="margin-top:4px; font-size:12px; color:var(--muted)">Versión <b>v18 · cerdo</b> · 30-jun</p>
   </div>
 </div>
 
@@ -445,7 +445,7 @@ function render(){
       const oa=ordenGrupo(grupoDe(a)), ob=ordenGrupo(grupoDe(b));
       if(oa!==ob) return oa-ob;          // 1) mercado en orden fijo
       const fa=fechaVal(a.dia), fb=fechaVal(b.dia);
-      if(fa!==fb) return fa-fb;          // 2) fecha ascendente dentro del mercado
+      if(fa!==fb) return fb-fa;          // 2) fecha: más reciente primero dentro del mercado
       const ca=a.cliente||"", cb=b.cliente||"";
       if(ca!==cb) return ca.localeCompare(cb);   // 3) cliente ascendente
       return Number(a.id)-Number(b.id);          // 4) número
