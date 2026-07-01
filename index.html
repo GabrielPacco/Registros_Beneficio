@@ -154,7 +154,7 @@
       <button class="btnd" id="borrarTodo">Borrar TODO</button>
     </div>
     <p style="margin-top:14px">Los datos se guardan en este celular y funcionan sin internet. Cada sección (Res / Cerdo marcar / Cerdo despachar) tiene su propia lista.</p>
-    <p style="margin-top:4px; font-size:12px; color:var(--muted)">Versión <b>v18 · cerdo</b> · 30-jun</p>
+    <p style="margin-top:4px; font-size:12px; color:var(--muted)">Versión <b>v19 · cerdo</b> · 30-jun</p>
   </div>
 </div>
 
@@ -180,7 +180,11 @@
 <div class="modal" id="modalMarcados">
   <div class="sheet">
     <h2 id="tituloMarcados">Hechos</h2>
-    <div id="listaMarcados"></div>
+    <div class="row2" id="ordenHechos" style="margin-top:2px">
+      <div class="chip" data-orden="reciente">Más reciente</div>
+      <div class="chip" data-orden="num">Por número</div>
+    </div>
+    <div id="listaMarcados" style="margin-top:8px"></div>
     <div class="acciones">
       <button class="btnd" id="cerrarMarcados">Cerrar</button>
     </div>
@@ -237,6 +241,7 @@ let mapaMerc = parsearMerc(mercTxt);
 let filtroPrim = "todos";
 let filtroCam = "todas";
 let filtroFecha = "todas";
+let ordenMarcados = "reciente";
 let q = "";
 let undoUid = null;
 
@@ -245,6 +250,14 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
 
 /* ====== Helpers de texto ====== */
 function esc(s){ return s.replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function haceCuanto(ts){
+  if(!ts) return "";
+  const s=Math.floor((Date.now()-ts)/1000);
+  if(s<60) return "hace "+s+"s";
+  const mn=Math.floor(s/60); if(mn<60) return "hace "+mn+" min";
+  const h=Math.floor(mn/60); if(h<24) return "hace "+h+" h";
+  return "hace "+Math.floor(h/24)+" d";
+}
 function norm(s){ return (s||"").toString().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]/g,""); }
 function normCli(c){ return (c||"").toString().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9*]/g,""); }
 const NOISE = new Set(["pieza","piezas","simb","simbolo","simbolos","camara","cam",
@@ -486,7 +499,7 @@ function marcar(u){
 }
 function aplicarMarca(u){
   const p = piezas.find(x=>x.uid===u); if(!p) return;
-  p.marcado = true; guardar(); render();
+  p.marcado = true; p.marcadoEn = Date.now(); guardar(); render();
   undoUid = u;
   document.getElementById("toastAccion").textContent = seccion==="cd" ? "Despachado" : "Marcado";
   document.getElementById("toastNum").textContent = p.id;
@@ -502,12 +515,15 @@ function desmarcar(u){
 /* ====== Hechos (marcados/despachados) ====== */
 function renderMarcados(){
   document.getElementById("tituloMarcados").textContent = seccion==="cd" ? "Despachados" : "Marcados";
+  document.querySelectorAll("#ordenHechos .chip").forEach(ch=>ch.classList.toggle("on", ch.dataset.orden===ordenMarcados));
   const c=document.getElementById("listaMarcados");
-  const m=piezas.filter(p=>p.marcado).sort((a,b)=>Number(a.id)-Number(b.id));
+  const m=piezas.filter(p=>p.marcado);
+  if(ordenMarcados==="reciente") m.sort((a,b)=>(b.marcadoEn||0)-(a.marcadoEn||0));
+  else m.sort((a,b)=>Number(a.id)-Number(b.id));
   if(m.length===0){ c.innerHTML=`<p>Nada aún.</p>`; return; }
   c.innerHTML = m.map(p=>`<div class="mk">
     <span class="num">${esc(p.id)}</span>
-    <span class="meta">${p.cliente?esc(p.cliente)+" · ":""}${esc(p.dia||"")}${p.peso?" · "+esc(p.peso)+" kg":""}${(p.camara&&p.camara!=="-")?" · C"+esc(p.camara):""}${seccion==="cd"?" · "+esc(mercadoDe(p.cliente)||"Sin mercado"):""}</span>
+    <span class="meta">${p.cliente?esc(p.cliente)+" · ":""}${esc(p.dia||"")}${p.peso?" · "+esc(p.peso)+" kg":""}${(p.camara&&p.camara!=="-")?" · C"+esc(p.camara):""}${seccion==="cd"?" · "+esc(mercadoDe(p.cliente)||"Sin mercado"):""}${p.marcadoEn?" · "+haceCuanto(p.marcadoEn):""}</span>
     <button class="btnd" data-undo="${p.uid}">Deshacer</button>
   </div>`).join("");
 }
@@ -575,6 +591,10 @@ document.getElementById("abrirMarcados").onclick = ()=>{ cerrar("modalMenu"); re
 document.getElementById("cerrarMarcados").onclick = ()=>cerrar("modalMarcados");
 document.getElementById("listaMarcados").addEventListener("click", e=>{
   const b=e.target.closest("[data-undo]"); if(b) desmarcar(b.dataset.undo);
+});
+document.getElementById("ordenHechos").addEventListener("click", e=>{
+  const el=e.target.closest(".chip"); if(!el) return;
+  ordenMarcados = el.dataset.orden; renderMarcados();
 });
 document.getElementById("abrirMercados").onclick = ()=>{ cerrar("modalMenu"); document.getElementById("textoMerc").value=mercTxt; abrir("modalMercados"); };
 document.getElementById("cerrarMercados").onclick = ()=>cerrar("modalMercados");
